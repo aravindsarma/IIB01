@@ -3,6 +3,13 @@
 CREATE COMPUTE MODULE TestFlow_Compute
 	CREATE FUNCTION Main() RETURNS BOOLEAN
 	BEGIN
+		CREATE FIELD OutputRoot.XMLNSC.DETAIL;
+		DECLARE refDetail REFERENCE TO OutputRoot.XMLNSC.DETAIL;
+		SET refDetail.REQUEST_CODE = '01';
+		SET refDetail.SENDER_ID = 'HN1';
+		SET refDetail.RECEIVER_ID ='MHS';
+		SET refDetail.RESEND_COUNTER='0000';
+		SET refDetail.RESPONSE_CODE='00';
 		-- CALL CopyMessageHeaders();
 		-- CALL CopyEntireMessage();
 		RETURN TRUE;
