@@ -9,7 +9,7 @@
       <nodes xmi:type="ComIbmFileInput.msgnode:FCMComposite_1" xmi:id="FCMComposite_1_1" location="428,61" rotation="TOP_TO_BOTTOM" inputDirectory="D:\Aravind\sandbox\Assignments\CSR\in" messageDomainProperty="XMLNSC">
         <translation xmi:type="utility:ConstantString" string="File Input"/>
       </nodes>
-      <nodes xmi:type="ComIbmFileOutput.msgnode:FCMComposite_1" xmi:id="FCMComposite_1_2" location="435,289" rotation="TOP_TO_BOTTOM" outputDirectory="D:\Aravind\sandbox\Assignments\CSR\out">
+      <nodes xmi:type="ComIbmFileOutput.msgnode:FCMComposite_1" xmi:id="FCMComposite_1_2" location="435,289" rotation="TOP_TO_BOTTOM" outputDirectory="D:\Aravind\sandbox\Assignments\CSR\out" outputFilename="sample_out.xml" outputMode="archiveAndReplaceWithTimestamp">
         <translation xmi:type="utility:ConstantString" string="File Output"/>
       </nodes>
       <nodes xmi:type="ComIbmCompute.msgnode:FCMComposite_1" xmi:id="FCMComposite_1_3" location="427,183" rotation="TOP_TO_BOTTOM" computeExpression="esql://routine/#TestFlow_Compute.Main">

@@ -3,13 +3,29 @@
 CREATE COMPUTE MODULE TestFlow_Compute
 	CREATE FUNCTION Main() RETURNS BOOLEAN
 	BEGIN
+		DECLARE refTran REFERENCE TO InputRoot.XMLNSC.refEnvBen.*:transactions.*:transaction;
 		CREATE FIELD OutputRoot.XMLNSC.DETAIL;
 		DECLARE refDetail REFERENCE TO OutputRoot.XMLNSC.DETAIL;
+		SET refDetail.FILLER_200 = '';
+		IF (refTran.*:transmissionTypeNm = 'Request') THEN
+			SET refDetail.TRANSMISSION_TYPE = 'DQ';
+		ELSE
+			SET refDetail.TRANSMISSION_TYPE = 'DR';
+		END IF;
 		SET refDetail.REQUEST_CODE = '01';
 		SET refDetail.SENDER_ID = 'HN1';
 		SET refDetail.RECEIVER_ID ='MHS';
 		SET refDetail.RESEND_COUNTER='0000';
 		SET refDetail.RESPONSE_CODE='00';
+		
+		--------------SOS Account1-----------------
+		CREATE FIELD refDetail.SOS_ACCOUNT;
+		DECLARE refAccount REFERENCE TO refDetail.SOS_ACCOUNT;
+		SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';	
+		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0) THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='04';
+		END IF;
+		
 		-- CALL CopyMessageHeaders();
 		-- CALL CopyEntireMessage();
 		RETURN TRUE;
