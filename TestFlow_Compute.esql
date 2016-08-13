@@ -82,8 +82,6 @@ CREATE COMPUTE MODULE TestFlow_Compute
 				CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0)) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='02';
 		END IF;
-		
-		
 		-------------------		
 		SET refDetail.SOS_PRODUCT_ID ='';
 		SET refDetail.FILLER_14='';
@@ -98,7 +96,7 @@ CREATE COMPUTE MODULE TestFlow_Compute
 		CREATE NEXTSIBLING OF refSBB AS refSBB REPEAT;
 		MOVE refSBB NEXTSIBLING REPEAT TYPE NAME;
 		SET refSBB ='';
-		IF (refDetail.SOS_NUMBER_OF_ITEMS = '02' OR refDetail.SOS_NUMBER_OF_ITEMS = '04') THEN
+		IF (refDetail.SOS_NUMBER_OF_ITEMS = '02' OR refDetail.SOS_NUMBER_OF_ITEMS = '03' OR refDetail.SOS_NUMBER_OF_ITEMS = '04') THEN
 			SET refSBB ='+';
 		END IF;
 		CREATE NEXTSIBLING OF refSBB AS refSBB REPEAT;
