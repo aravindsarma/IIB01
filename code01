@@ -1,0 +1,161 @@
+CREATE FIELD refDetail.SOS_ACCOUNT;
+		DECLARE refAccount REFERENCE TO refDetail.SOS_ACCOUNT;
+		SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';	
+		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0) THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='04';
+		END IF;
+		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
+				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0) THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='05';
+		END IF;
+		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
+				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0) THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';
+		END IF;
+		
+		SET refAccount.PARTICIPATION_TYPE='';
+		IF (LENGTH(refAccount.TYPE_OF_BENEFIT_ACCOUNT) <> 0) THEN
+			SET refAccount.PARTICIPATION_TYPE='0';
+		END IF;
+				
+	      --Added by Srini Amirapu as a part of requirement for PARTICIPATION_TYPE mapping document
+		
+		IF refTran.*:additionalData.*:DeductibleAccount IN ('001','000','0') AND refTran.*:additionalData.*:accumulatorValue IN ('33','34','36','37')  THEN
+			SET refAccount.PARTICIPATION_TYPE= '1';
+		ELSEIF refTran.*:additionalData.*:DeductibleAccount IN ('008') AND refTran.*:additionalData.*:accumulatorValue IN ('33','34','36','37')  THEN
+			SET refAccount.PARTICIPATION_TYPE= '2';
+		ELSEIF refTran.*:networkInd IN ('INN','INP') THEN
+			SET refAccount.PARTICIPATION_TYPE= '1';
+		ELSEIF refTran.*:networkInd='OON' AND refTran.*:additionalData.*:accumulatorValue='28'  THEN
+			SET refAccount.PARTICIPATION_TYPE='2';
+		ELSEIF refTran.*:networkInd='OON' AND refTran.*:additionalData.*:accumulatorValue<>'28' THEN
+			SET refAccount.PARTICIPATION_TYPE='1';
+		ELSE
+			SET refAccount.PARTICIPATION_TYPE='0';
+		END IF;
+		
+		
+	   			
+		DECLARE temp DECIMAL;
+		DECLARE temp1 DECIMAL;
+
+		SET temp	=	CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) * 100;				
+		SET temp1	=	CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) * 100;	
+
+		SET refAccount.CURRENT_AMOUNT= 0;
+		SET refAccount.CR_DB_INDICATOR='';
+		IF (temp <> 0.0 ) THEN
+			IF (temp < 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = temp * -1.0;
+				SET refAccount.CR_DB_INDICATOR='-';
+			ELSEIF (temp > 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = temp;
+				SET refAccount.CR_DB_INDICATOR='+';
+			END IF;			
+		ELSEIF temp1 <> 0.0 THEN
+			IF (temp1 < 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = temp1 * -1.0;
+				SET refAccount.CR_DB_INDICATOR='-';
+			ELSEIF (temp1 > 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = temp1;
+				SET refAccount.CR_DB_INDICATOR='+';
+			END IF;			
+		END IF;		
+		
+		IF ((refAccount.CURRENT_AMOUNT ) = 0) THEN
+			SET refAccount.ACCUMULATED_AMOUNT='';
+			SET refAccount.REMAINING_AMOUNT='';
+		ELSE
+			SET refAccount.ACCUMULATED_AMOUNT='0000000000';
+			SET refAccount.REMAINING_AMOUNT='0000000000';
+		END IF;		
+		--------------SOSAccount2-----------------
+		CREATE NEXTSIBLING OF refAccount AS refAccount REPEAT;
+		MOVE refAccount NEXTSIBLING REPEAT TYPE NAME;
+		
+		SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';	
+		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0 AND 
+				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0) THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='05';		
+		END IF;
+		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
+				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0) THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';			
+		END IF;
+		
+		SET refAccount.PARTICIPATION_TYPE='';
+		IF (LENGTH(refAccount.TYPE_OF_BENEFIT_ACCOUNT) <> 0) THEN
+			SET refAccount.PARTICIPATION_TYPE='0';
+		END IF;
+		
+		--Added by Srini Amirapu as a part of requirement for PARTICIPATION_TYPE mapping document
+		
+		IF refTran.*:additionalData.*:DeductibleAccount IN ('001','0','000') AND refTran.*:additionalData.*:accumulatorValue IN ('33','34','36','37')  THEN
+			SET refAccount.PARTICIPATION_TYPE= '1';
+		ELSEIF refTran.*:additionalData.*:DeductibleAccount IN ('008') AND refTran.*:additionalData.*:accumulatorValue IN ('33','34','36','37')  THEN
+			SET refAccount.PARTICIPATION_TYPE= '2';
+		ELSEIF refTran.*:networkInd IN ('INN','INP') THEN
+			SET refAccount.PARTICIPATION_TYPE= '1';
+		ELSEIF refTran.*:networkInd='OON' AND refTran.*:additionalData.*:accumulatorValue='28' THEN
+			SET refAccount.PARTICIPATION_TYPE='2';
+		ELSEIF refTran.*:networkInd='OON' AND refTran.*:additionalData.*:accumulatorValue<>'28' THEN
+			SET refAccount.PARTICIPATION_TYPE='1';
+		ELSE
+			SET refAccount.PARTICIPATION_TYPE='0';
+		END IF;
+		
+		SET refAccount.CURRENT_AMOUNT= 0;
+		SET refAccount.CR_DB_INDICATOR='';
+		IF (temp <> 0.0 AND temp1 <> 0.0) THEN			
+			IF (temp1 < 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = temp1 * -1.0;
+				SET refAccount.CR_DB_INDICATOR='-';
+			ELSEIF (temp1 > 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = temp1;
+				SET refAccount.CR_DB_INDICATOR='+';
+			END IF;
+		END IF;	
+		
+		IF (refAccount.CURRENT_AMOUNT) <> 0 THEN
+			SET refAccount.ACCUMULATED_AMOUNT = '0000000000';
+			SET refAccount.REMAINING_AMOUNT = '0000000000';
+		ELSE
+			SET refAccount.ACCUMULATED_AMOUNT='';
+			SET refAccount.REMAINING_AMOUNT='';
+		END IF;
+		--------------SOSAccount3-----------------
+		CREATE NEXTSIBLING OF refAccount AS refAccount REPEAT;
+		MOVE refAccount NEXTSIBLING REPEAT TYPE NAME;
+		SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';		
+		SET refAccount.PARTICIPATION_TYPE='';
+		SET refAccount.CURRENT_AMOUNT='';
+		SET refAccount.CR_DB_INDICATOR='';
+		SET refAccount.ACCUMULATED_AMOUNT='';
+		SET refAccount.REMAINING_AMOUNT='';
+		--------------SOSAccount4-----------------
+		CREATE NEXTSIBLING OF refAccount AS refAccount REPEAT;
+		MOVE refAccount NEXTSIBLING REPEAT TYPE NAME;
+		SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';		
+		SET refAccount.PARTICIPATION_TYPE='';
+		SET refAccount.CURRENT_AMOUNT='';
+		SET refAccount.CR_DB_INDICATOR='';
+		SET refAccount.ACCUMULATED_AMOUNT='';
+		SET refAccount.REMAINING_AMOUNT='';
+		--------------SOSAccount5-----------------
+		CREATE NEXTSIBLING OF refAccount AS refAccount REPEAT;
+		MOVE refAccount NEXTSIBLING REPEAT TYPE NAME;
+		SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';		
+		SET refAccount.PARTICIPATION_TYPE='';
+		SET refAccount.CURRENT_AMOUNT='';
+		SET refAccount.CR_DB_INDICATOR='';
+		SET refAccount.ACCUMULATED_AMOUNT='';
+		SET refAccount.REMAINING_AMOUNT='';
+		--------------SOSAccount6-----------------
+		CREATE NEXTSIBLING OF refAccount AS refAccount REPEAT;
+		MOVE refAccount NEXTSIBLING REPEAT TYPE NAME;
+		SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';		
+		SET refAccount.PARTICIPATION_TYPE='';
+		SET refAccount.CURRENT_AMOUNT='';
+		SET refAccount.CR_DB_INDICATOR='';
+		SET refAccount.ACCUMULATED_AMOUNT='';
+		SET refAccount.REMAINING_AMOUNT='';
