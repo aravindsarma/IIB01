@@ -20,34 +20,70 @@ CREATE COMPUTE MODULE TestFlow_Compute
 		--
 		--
 		SET refDetail.PARTNER_PATIENT_ID='';
-		------------------			
+		------------------	
+		-- Normal claim	01	
 		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 OR 
 				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='01';	
 		END IF;
+		---------------------------------------------------------------------------------------------------------------------------------
+		-- Normal claim	02
 		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0 AND 
 				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='02';	
 		END IF;
+		-- Normal claim 02 AND shadow claim 01
+		IF (refDetail.SOS_NUMBER_OF_ITEMS = 02 AND
+			(CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0 OR 
+				CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0)) THEN
+			SET refDetail.SOS_NUMBER_OF_ITEMS='03';	
+		END IF;
+		-- Normal claim	02 AND shadow claim 02
+		IF (refDetail.SOS_NUMBER_OF_ITEMS = 03 AND 
+			(CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0 AND 
+				CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0)) THEN
+			SET refDetail.SOS_NUMBER_OF_ITEMS='04';	
+		END IF;
+		---------------------------------------------------------------------------------------------------------------------------------
+		-- Normal claim 01 AND shadow claim 01 
 		IF (refDetail.SOS_NUMBER_OF_ITEMS = 01 AND 
 			(CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0 OR 
 				CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0)) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='02';	
 		END IF;
+		-- Normal claim	01 AND shadow claim 02
 		IF (refDetail.SOS_NUMBER_OF_ITEMS = 02 AND 
 			(CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0 AND 
 				CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0)) THEN
-			SET refDetail.SOS_NUMBER_OF_ITEMS='04';	
+			SET refDetail.SOS_NUMBER_OF_ITEMS='03';	
 		END IF;
+		---------------------------------------------------------------------------------------------------------------------------------
+		-- Normal claim 00
 		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
 				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='';	
 		END IF;
+		-- Normal claim 00 AND shadow claim 01
 		IF (refDetail.SOS_NUMBER_OF_ITEMS='' AND
+			(CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 OR 
+				CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0)) THEN
+			SET refDetail.SOS_NUMBER_OF_ITEMS='01';
+		END IF;
+		-- Normal claim 00 AND shadow claim 00
+		IF ((CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
+				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0) AND
 			(CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
 				CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0)) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='';	
 		END IF;
+		-- Normal claim 00 AND shadow claim 02
+		IF (refDetail.SOS_NUMBER_OF_ITEMS='' AND
+			(CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0 AND 
+				CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0)) THEN
+			SET refDetail.SOS_NUMBER_OF_ITEMS='02';
+		END IF;
+		
+		
 		-------------------		
 		SET refDetail.SOS_PRODUCT_ID ='';
 		SET refDetail.FILLER_14='';
@@ -56,19 +92,19 @@ CREATE COMPUTE MODULE TestFlow_Compute
 		DECLARE refSBB REFERENCE TO refDetail.SOS_SIGN_BIT_BALANCE;
 --		MOVE refSBB NEXTSIBLING REPEAT TYPE NAME;
 		SET refSBB ='';
-		IF (refDetail.SOS_NUMBER_OF_ITEMS IN ('01', '02','03','04')) THEN
+		IF (refDetail.SOS_NUMBER_OF_ITEMS IN ('01','02','03','04')) THEN
 			SET refSBB ='+';
 		END IF;
 		CREATE NEXTSIBLING OF refSBB AS refSBB REPEAT;
 		MOVE refSBB NEXTSIBLING REPEAT TYPE NAME;
 		SET refSBB ='';
-		IF (refDetail.SOS_NUMBER_OF_ITEMS = '02') THEN
+		IF (refDetail.SOS_NUMBER_OF_ITEMS = '02' OR refDetail.SOS_NUMBER_OF_ITEMS = '04') THEN
 			SET refSBB ='+';
 		END IF;
 		CREATE NEXTSIBLING OF refSBB AS refSBB REPEAT;
 		MOVE refSBB NEXTSIBLING REPEAT TYPE NAME;
 		SET refSBB ='';
-		IF (refDetail.SOS_NUMBER_OF_ITEMS = '03') THEN
+		IF (refDetail.SOS_NUMBER_OF_ITEMS = '03' OR refDetail.SOS_NUMBER_OF_ITEMS = '04') THEN
 			SET refSBB ='+';
 		END IF;
 		CREATE NEXTSIBLING OF refSBB AS refSBB REPEAT;
