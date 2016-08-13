@@ -124,7 +124,32 @@ CREATE COMPUTE MODULE TestFlow_Compute
 		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0) THEN
 			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='04';
 		END IF;
+		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
+				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0) THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='05';
+		END IF;
+		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
+				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND
+					CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0) THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='24';
+		END IF;
+		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
+				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND
+					CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND
+						CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0)THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='25';	
+		END IF;
+		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
+				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND
+					CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND
+						CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0)THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';
+		END IF;
 		
+		SET refAccount.PARTICIPATION_TYPE='';
+		IF (LENGTH(refAccount.TYPE_OF_BENEFIT_ACCOUNT) <> 0) THEN
+			SET refAccount.PARTICIPATION_TYPE='0';
+		END IF;
 		-- CALL CopyMessageHeaders();
 		-- CALL CopyEntireMessage();
 		RETURN TRUE;
