@@ -20,7 +20,9 @@ CREATE COMPUTE MODULE TestFlow_Compute
 		--
 		--
 		SET refDetail.PARTNER_PATIENT_ID='';
-		------------------	
+		---------------------------------------------------------------------------------------------------------------------------------
+		-- Temp variables used by all SOS Accounts
+		---------------------------------------------------------------------------------------------------------------------------------
 		DECLARE deductibleAdjustAmt DECIMAL 0.0;
 		DECLARE totalOOPAdjustAmt DECIMAL 0.0;
 		DECLARE shadowDeductibleAdjustAmt DECIMAL 0.0;
@@ -126,6 +128,18 @@ CREATE COMPUTE MODULE TestFlow_Compute
 		CREATE NEXTSIBLING OF refSBB AS refSBB REPEAT;
 		MOVE refSBB NEXTSIBLING REPEAT TYPE NAME;
 		SET refSBB ='';
+		---------------------------------------------------------------------------------------------------------------------------------
+		-- Temp variables used by all SOS Accounts
+		---------------------------------------------------------------------------------------------------------------------------------
+		DECLARE deductibleAdjustAmt100 DECIMAL 0.0;
+		DECLARE totalOOPAdjustAmt100 DECIMAL 0.0;
+		DECLARE shadowDeductibleAdjustAmt100 DECIMAL 0.0;
+		DECLARE shadowTotalOOPAdjustAmt100 DECIMAL 0.0;
+		SET deductibleAdjustAmt100 = deductibleAdjustAmt * 100;
+		SET totalOOPAdjustAmt100 = totalOOPAdjustAmt * 100;
+		SET shadowDeductibleAdjustAmt100 = shadowDeductibleAdjustAmt * 100;
+		SET shadowTotalOOPAdjustAmt100 = shadowTotalOOPAdjustAmt * 100;
+		---------------------------------------------------------------------------------------------------------------------------------
 		--------------SOS Account1-----------------
 		CREATE FIELD refDetail.SOS_ACCOUNT;
 		DECLARE refAccount REFERENCE TO refDetail.SOS_ACCOUNT;
@@ -150,10 +164,67 @@ CREATE COMPUTE MODULE TestFlow_Compute
 						shadowTotalOOPAdjustAmt <> 0.0)THEN
 			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='25';	
 		END IF;
-		
+		-- PARTICIPATION_TYPE
 		SET refAccount.PARTICIPATION_TYPE='';
 		IF (LENGTH(refAccount.TYPE_OF_BENEFIT_ACCOUNT) <> 0) THEN
 			SET refAccount.PARTICIPATION_TYPE='0';
+		END IF;
+		IF refTran.*:additionalData.*:DeductibleAccount IN ('001','000','0') AND refTran.*:additionalData.*:accumulatorValue IN ('33','34','36','37')  THEN
+			SET refAccount.PARTICIPATION_TYPE= '1';
+		ELSEIF refTran.*:additionalData.*:DeductibleAccount IN ('008') AND refTran.*:additionalData.*:accumulatorValue IN ('33','34','36','37')  THEN
+			SET refAccount.PARTICIPATION_TYPE= '2';
+		ELSEIF refTran.*:networkInd IN ('INN','INP') THEN
+			SET refAccount.PARTICIPATION_TYPE= '1';
+		ELSEIF refTran.*:networkInd='OON' AND refTran.*:additionalData.*:accumulatorValue='28'  THEN
+			SET refAccount.PARTICIPATION_TYPE='2';
+		ELSEIF refTran.*:networkInd='OON' AND refTran.*:additionalData.*:accumulatorValue<>'28' THEN
+			SET refAccount.PARTICIPATION_TYPE='1';
+		ELSE
+			SET refAccount.PARTICIPATION_TYPE='0';
+		END IF;
+		-- CURRENT_AMOUNT -- CR_DB_INDICATOR
+		SET refAccount.CURRENT_AMOUNT= 0;
+		SET refAccount.CR_DB_INDICATOR='';
+		IF (deductibleAdjustAmt100 <> 0.0 ) THEN
+			IF (deductibleAdjustAmt100 < 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = deductibleAdjustAmt100 * -1.0;
+				SET refAccount.CR_DB_INDICATOR='-';
+			ELSEIF (deductibleAdjustAmt100 > 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = deductibleAdjustAmt100;
+				SET refAccount.CR_DB_INDICATOR='+';
+			END IF;			
+		ELSEIF totalOOPAdjustAmt100 <> 0.0 THEN
+			IF (totalOOPAdjustAmt100 < 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = totalOOPAdjustAmt100 * -1.0;
+				SET refAccount.CR_DB_INDICATOR='-';
+			ELSEIF (totalOOPAdjustAmt100 > 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = totalOOPAdjustAmt100;
+				SET refAccount.CR_DB_INDICATOR='+';
+			END IF;
+		ELSEIF shadowDeductibleAdjustAmt100 <> 0.0 THEN
+			IF (shadowDeductibleAdjustAmt100 < 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = shadowDeductibleAdjustAmt100 * -1.0;
+				SET refAccount.CR_DB_INDICATOR='-';
+			ELSEIF (shadowDeductibleAdjustAmt100 > 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = shadowDeductibleAdjustAmt100;
+				SET refAccount.CR_DB_INDICATOR='+';
+			END IF;
+		ELSEIF shadowTotalOOPAdjustAmt100 <> 0.0 THEN
+			IF (shadowTotalOOPAdjustAmt100 < 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = shadowTotalOOPAdjustAmt100 * -1.0;
+				SET refAccount.CR_DB_INDICATOR='-';
+			ELSEIF (shadowTotalOOPAdjustAmt100 > 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = shadowTotalOOPAdjustAmt100;
+				SET refAccount.CR_DB_INDICATOR='+';
+			END IF;	
+		END IF;
+		-- ACCUMULATED_AMOUNT -- REMAINING_AMOUNT
+		IF (refAccount.CURRENT_AMOUNT) <> 0 THEN
+			SET refAccount.ACCUMULATED_AMOUNT = '0000000000';
+			SET refAccount.REMAINING_AMOUNT = '0000000000';
+		ELSE
+			SET refAccount.ACCUMULATED_AMOUNT='';
+			SET refAccount.REMAINING_AMOUNT='';
 		END IF;
 		--------------SOS Account2-----------------
 		CREATE NEXTSIBLING OF refAccount AS refAccount REPEAT;
@@ -187,6 +258,60 @@ CREATE COMPUTE MODULE TestFlow_Compute
 							shadowTotalOOPAdjustAmt <> 0.0))THEN
 			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='25';	
 		END IF;
+		-- PARTICIPATION_TYPE
+		SET refAccount.PARTICIPATION_TYPE='';
+		IF (LENGTH(refAccount.TYPE_OF_BENEFIT_ACCOUNT) <> 0) THEN
+			SET refAccount.PARTICIPATION_TYPE='0';
+		END IF;
+		IF refTran.*:additionalData.*:DeductibleAccount IN ('001','000','0') AND refTran.*:additionalData.*:accumulatorValue IN ('33','34','36','37')  THEN
+			SET refAccount.PARTICIPATION_TYPE= '1';
+		ELSEIF refTran.*:additionalData.*:DeductibleAccount IN ('008') AND refTran.*:additionalData.*:accumulatorValue IN ('33','34','36','37')  THEN
+			SET refAccount.PARTICIPATION_TYPE= '2';
+		ELSEIF refTran.*:networkInd IN ('INN','INP') THEN
+			SET refAccount.PARTICIPATION_TYPE= '1';
+		ELSEIF refTran.*:networkInd='OON' AND refTran.*:additionalData.*:accumulatorValue='28'  THEN
+			SET refAccount.PARTICIPATION_TYPE='2';
+		ELSEIF refTran.*:networkInd='OON' AND refTran.*:additionalData.*:accumulatorValue<>'28' THEN
+			SET refAccount.PARTICIPATION_TYPE='1';
+		ELSE
+			SET refAccount.PARTICIPATION_TYPE='0';
+		END IF;
+		-- CURRENT_AMOUNT -- CR_DB_INDICATOR
+		SET refAccount.CURRENT_AMOUNT= 0;
+		SET refAccount.CR_DB_INDICATOR='';
+		IF (deductibleAdjustAmt100 <> 0.0 AND totalOOPAdjustAmt100 <> 0.0) THEN			
+			IF (totalOOPAdjustAmt100 < 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = totalOOPAdjustAmt100 * -1.0;
+				SET refAccount.CR_DB_INDICATOR='-';
+			ELSEIF (totalOOPAdjustAmt100 > 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = totalOOPAdjustAmt100;
+				SET refAccount.CR_DB_INDICATOR='+';
+			END IF;
+		ELSEIF shadowDeductibleAdjustAmt100 <> 0.0 THEN
+			IF (shadowDeductibleAdjustAmt100 < 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = shadowDeductibleAdjustAmt100 * -1.0;
+				SET refAccount.CR_DB_INDICATOR='-';
+			ELSEIF (shadowDeductibleAdjustAmt100 > 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = shadowDeductibleAdjustAmt100;
+				SET refAccount.CR_DB_INDICATOR='+';
+			END IF;
+		ELSEIF shadowTotalOOPAdjustAmt100 <> 0.0 THEN
+			IF (shadowTotalOOPAdjustAmt100 < 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = shadowTotalOOPAdjustAmt100 * -1.0;
+				SET refAccount.CR_DB_INDICATOR='-';
+			ELSEIF (shadowTotalOOPAdjustAmt100 > 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = shadowTotalOOPAdjustAmt100;
+				SET refAccount.CR_DB_INDICATOR='+';
+			END IF;	
+		END IF;	
+		-- ACCUMULATED_AMOUNT -- REMAINING_AMOUNT
+		IF (refAccount.CURRENT_AMOUNT) <> 0 THEN
+			SET refAccount.ACCUMULATED_AMOUNT = '0000000000';
+			SET refAccount.REMAINING_AMOUNT = '0000000000';
+		ELSE
+			SET refAccount.ACCUMULATED_AMOUNT='';
+			SET refAccount.REMAINING_AMOUNT='';
+		END IF;
 		--------------SOS Account3-----------------
 		CREATE NEXTSIBLING OF refAccount AS refAccount REPEAT;
 		MOVE refAccount NEXTSIBLING REPEAT TYPE NAME;
@@ -212,6 +337,52 @@ CREATE COMPUTE MODULE TestFlow_Compute
 						shadowTotalOOPAdjustAmt <> 0.0))THEN
 			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='25';	
 		END IF;
+		-- PARTICIPATION_TYPE
+		SET refAccount.PARTICIPATION_TYPE='';
+		IF (LENGTH(refAccount.TYPE_OF_BENEFIT_ACCOUNT) <> 0) THEN
+			SET refAccount.PARTICIPATION_TYPE='0';
+		END IF;
+		IF refTran.*:additionalData.*:DeductibleAccount IN ('001','000','0') AND refTran.*:additionalData.*:accumulatorValue IN ('33','34','36','37')  THEN
+			SET refAccount.PARTICIPATION_TYPE= '1';
+		ELSEIF refTran.*:additionalData.*:DeductibleAccount IN ('008') AND refTran.*:additionalData.*:accumulatorValue IN ('33','34','36','37')  THEN
+			SET refAccount.PARTICIPATION_TYPE= '2';
+		ELSEIF refTran.*:networkInd IN ('INN','INP') THEN
+			SET refAccount.PARTICIPATION_TYPE= '1';
+		ELSEIF refTran.*:networkInd='OON' AND refTran.*:additionalData.*:accumulatorValue='28'  THEN
+			SET refAccount.PARTICIPATION_TYPE='2';
+		ELSEIF refTran.*:networkInd='OON' AND refTran.*:additionalData.*:accumulatorValue<>'28' THEN
+			SET refAccount.PARTICIPATION_TYPE='1';
+		ELSE
+			SET refAccount.PARTICIPATION_TYPE='0';
+		END IF;
+		-- CURRENT_AMOUNT -- CR_DB_INDICATOR
+		SET refAccount.CURRENT_AMOUNT= 0;
+		SET refAccount.CR_DB_INDICATOR='';
+		IF (deductibleAdjustAmt100 <> 0.0 AND totalOOPAdjustAmt100 <> 0.0 AND shadowDeductibleAdjustAmt100 <> 0.0) THEN			
+			IF (shadowDeductibleAdjustAmt100 < 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = shadowDeductibleAdjustAmt100 * -1.0;
+				SET refAccount.CR_DB_INDICATOR='-';
+			ELSEIF (shadowDeductibleAdjustAmt100 > 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = shadowDeductibleAdjustAmt100;
+				SET refAccount.CR_DB_INDICATOR='+';
+			END IF;
+		ELSEIF shadowTotalOOPAdjustAmt100 <> 0.0 THEN
+			IF (shadowTotalOOPAdjustAmt100 < 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = shadowTotalOOPAdjustAmt100 * -1.0;
+				SET refAccount.CR_DB_INDICATOR='-';
+			ELSEIF (shadowTotalOOPAdjustAmt100 > 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = shadowTotalOOPAdjustAmt100;
+				SET refAccount.CR_DB_INDICATOR='+';
+			END IF;	
+		END IF;	
+		-- ACCUMULATED_AMOUNT -- REMAINING_AMOUNT
+		IF (refAccount.CURRENT_AMOUNT) <> 0 THEN
+			SET refAccount.ACCUMULATED_AMOUNT = '0000000000';
+			SET refAccount.REMAINING_AMOUNT = '0000000000';
+		ELSE
+			SET refAccount.ACCUMULATED_AMOUNT='';
+			SET refAccount.REMAINING_AMOUNT='';
+		END IF;
 		--------------SOS Account4-----------------
 		CREATE NEXTSIBLING OF refAccount AS refAccount REPEAT;
 		MOVE refAccount NEXTSIBLING REPEAT TYPE NAME;
@@ -223,6 +394,44 @@ CREATE COMPUTE MODULE TestFlow_Compute
 					shadowDeductibleAdjustAmt <> 0.0 AND
 						shadowTotalOOPAdjustAmt <> 0.0)THEN
 			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='25';	
+		END IF;
+		-- PARTICIPATION_TYPE
+		SET refAccount.PARTICIPATION_TYPE='';
+		IF (LENGTH(refAccount.TYPE_OF_BENEFIT_ACCOUNT) <> 0) THEN
+			SET refAccount.PARTICIPATION_TYPE='0';
+		END IF;
+		IF refTran.*:additionalData.*:DeductibleAccount IN ('001','000','0') AND refTran.*:additionalData.*:accumulatorValue IN ('33','34','36','37')  THEN
+			SET refAccount.PARTICIPATION_TYPE= '1';
+		ELSEIF refTran.*:additionalData.*:DeductibleAccount IN ('008') AND refTran.*:additionalData.*:accumulatorValue IN ('33','34','36','37')  THEN
+			SET refAccount.PARTICIPATION_TYPE= '2';
+		ELSEIF refTran.*:networkInd IN ('INN','INP') THEN
+			SET refAccount.PARTICIPATION_TYPE= '1';
+		ELSEIF refTran.*:networkInd='OON' AND refTran.*:additionalData.*:accumulatorValue='28'  THEN
+			SET refAccount.PARTICIPATION_TYPE='2';
+		ELSEIF refTran.*:networkInd='OON' AND refTran.*:additionalData.*:accumulatorValue<>'28' THEN
+			SET refAccount.PARTICIPATION_TYPE='1';
+		ELSE
+			SET refAccount.PARTICIPATION_TYPE='0';
+		END IF;
+		-- CURRENT_AMOUNT -- CR_DB_INDICATOR
+		SET refAccount.CURRENT_AMOUNT= 0;
+		SET refAccount.CR_DB_INDICATOR='';
+		IF (deductibleAdjustAmt100 <> 0.0 AND totalOOPAdjustAmt100 <> 0.0 AND shadowDeductibleAdjustAmt100 <> 0.0 AND shadowTotalOOPAdjustAmt100 <> 0.0) THEN			
+			IF (shadowTotalOOPAdjustAmt100 < 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = shadowTotalOOPAdjustAmt100 * -1.0;
+				SET refAccount.CR_DB_INDICATOR='-';
+			ELSEIF (shadowTotalOOPAdjustAmt100 > 0.0) THEN
+				SET refAccount.CURRENT_AMOUNT = shadowTotalOOPAdjustAmt100;
+				SET refAccount.CR_DB_INDICATOR='+';
+			END IF;	
+		END IF;	
+		-- ACCUMULATED_AMOUNT -- REMAINING_AMOUNT
+		IF (refAccount.CURRENT_AMOUNT) <> 0 THEN
+			SET refAccount.ACCUMULATED_AMOUNT = '0000000000';
+			SET refAccount.REMAINING_AMOUNT = '0000000000';
+		ELSE
+			SET refAccount.ACCUMULATED_AMOUNT='';
+			SET refAccount.REMAINING_AMOUNT='';
 		END IF;
 		--------------SOS Account5-----------------
 		CREATE NEXTSIBLING OF refAccount AS refAccount REPEAT;
