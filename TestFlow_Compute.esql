@@ -21,68 +21,77 @@ CREATE COMPUTE MODULE TestFlow_Compute
 		--
 		SET refDetail.PARTNER_PATIENT_ID='';
 		------------------	
+		DECLARE deductibleAdjustAmt DECIMAL 0.0;
+		DECLARE totalOOPAdjustAmt DECIMAL 0.0;
+		DECLARE shadowDeductibleAdjustAmt DECIMAL 0.0;
+		DECLARE shadowTotalOOPAdjustAmt DECIMAL 0.0;
+		SET deductibleAdjustAmt = CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0);
+		SET totalOOPAdjustAmt = CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0);
+		SET shadowDeductibleAdjustAmt = CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0);
+		SET shadowTotalOOPAdjustAmt = CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0);
+		---------------------------------------------------------------------------------------------------------------------------------
 		-- Normal claim	01	
-		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 OR 
-				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0) THEN
+		IF (deductibleAdjustAmt = 0.0 OR 
+				totalOOPAdjustAmt = 0.0) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='01';	
 		END IF;
 		---------------------------------------------------------------------------------------------------------------------------------
 		-- Normal claim	02
-		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0 AND 
-				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0) THEN
+		IF (deductibleAdjustAmt <> 0.0 AND 
+				totalOOPAdjustAmt <> 0) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='02';	
 		END IF;
 		-- Normal claim 02 AND shadow claim 01
 		IF (refDetail.SOS_NUMBER_OF_ITEMS = 02 AND
-			(CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0 OR 
-				CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0)) THEN
+			(shadowDeductibleAdjustAmt <> 0.0 OR 
+				shadowTotalOOPAdjustAmt <> 0)) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='03';	
 		END IF;
 		-- Normal claim	02 AND shadow claim 02
 		IF (refDetail.SOS_NUMBER_OF_ITEMS = 03 AND 
-			(CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0 AND 
-				CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0)) THEN
+			(shadowDeductibleAdjustAmt <> 0.0 AND 
+				shadowTotalOOPAdjustAmt <> 0)) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='04';	
 		END IF;
 		---------------------------------------------------------------------------------------------------------------------------------
 		-- Normal claim 01 AND shadow claim 01 
 		IF (refDetail.SOS_NUMBER_OF_ITEMS = 01 AND 
-			(CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0 OR 
-				CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0)) THEN
+			(shadowDeductibleAdjustAmt <> 0.0 OR 
+				shadowTotalOOPAdjustAmt <> 0)) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='02';	
 		END IF;
 		-- Normal claim	01 AND shadow claim 02
 		IF (refDetail.SOS_NUMBER_OF_ITEMS = 02 AND 
-			(CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0 AND 
-				CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0)) THEN
+			(shadowDeductibleAdjustAmt <> 0.0 AND 
+				shadowTotalOOPAdjustAmt <> 0)) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='03';	
 		END IF;
 		---------------------------------------------------------------------------------------------------------------------------------
 		-- Normal claim 00
-		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
-				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0) THEN
+		IF (deductibleAdjustAmt = 0.0 AND 
+				totalOOPAdjustAmt = 0.0) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='';	
 		END IF;
 		-- Normal claim 00 AND shadow claim 01
 		IF (refDetail.SOS_NUMBER_OF_ITEMS='' AND
-			(CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 OR 
-				CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0)) THEN
+			(shadowDeductibleAdjustAmt = 0.0 OR 
+				shadowTotalOOPAdjustAmt = 0.0)) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='01';
 		END IF;
 		-- Normal claim 00 AND shadow claim 00
-		IF ((CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
-				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0) AND
-			(CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
-				CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0)) THEN
+		IF (deductibleAdjustAmt = 0.0 AND 
+				totalOOPAdjustAmt = 0.0 AND
+			shadowDeductibleAdjustAmt = 0.0 AND 
+				shadowTotalOOPAdjustAmt = 0.0) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='';	
 		END IF;
 		-- Normal claim 00 AND shadow claim 02
 		IF (refDetail.SOS_NUMBER_OF_ITEMS='' AND
-			(CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0 AND 
-				CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0)) THEN
+			(shadowDeductibleAdjustAmt <> 0.0 AND 
+				shadowTotalOOPAdjustAmt <> 0)) THEN
 			SET refDetail.SOS_NUMBER_OF_ITEMS='02';
 		END IF;
-		-------------------		
+		---------------------------------------------------------------------------------------------------------------------------------
 		SET refDetail.SOS_PRODUCT_ID ='';
 		SET refDetail.FILLER_14='';
 		--SET refDetail.SOS_SIGN_BIT_BALANCE='';
@@ -120,36 +129,121 @@ CREATE COMPUTE MODULE TestFlow_Compute
 		--------------SOS Account1-----------------
 		CREATE FIELD refDetail.SOS_ACCOUNT;
 		DECLARE refAccount REFERENCE TO refDetail.SOS_ACCOUNT;
+		SET refAccount.TYPE_OF_ACCOUNT ='SOS Account1';-- DO NOT INCLUDE IN ORIGINAL
+		-- TYPE_OF_BENEFIT_ACCOUNT
 		SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';	
-		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0) THEN
+		IF (deductibleAdjustAmt <> 0.0) THEN
 			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='04';
 		END IF;
-		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
-				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0) THEN
+		IF (deductibleAdjustAmt = 0.0 AND 
+				totalOOPAdjustAmt <> 0.0) THEN
 			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='05';
 		END IF;
-		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
-				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND
-					CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0) THEN
+		IF (deductibleAdjustAmt = 0.0 AND 
+				totalOOPAdjustAmt = 0.0 AND
+					shadowDeductibleAdjustAmt <> 0.0) THEN
 			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='24';
 		END IF;
-		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
-				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND
-					CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND
-						CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) <> 0.0)THEN
+		IF (deductibleAdjustAmt = 0.0 AND 
+				totalOOPAdjustAmt = 0.0 AND
+					shadowDeductibleAdjustAmt = 0.0 AND
+						shadowTotalOOPAdjustAmt <> 0.0)THEN
 			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='25';	
-		END IF;
-		IF (CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND 
-				CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND
-					CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0 AND
-						CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0) = 0.0)THEN
-			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';
 		END IF;
 		
 		SET refAccount.PARTICIPATION_TYPE='';
 		IF (LENGTH(refAccount.TYPE_OF_BENEFIT_ACCOUNT) <> 0) THEN
 			SET refAccount.PARTICIPATION_TYPE='0';
 		END IF;
+		--------------SOS Account2-----------------
+		CREATE NEXTSIBLING OF refAccount AS refAccount REPEAT;
+		MOVE refAccount NEXTSIBLING REPEAT TYPE NAME;
+		SET refAccount.TYPE_OF_ACCOUNT ='SOS Account2';-- DO NOT INCLUDE IN ORIGINAL
+		-- TYPE_OF_BENEFIT_ACCOUNT
+		SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';
+		IF (deductibleAdjustAmt <> 0.0 AND 
+				totalOOPAdjustAmt <> 0.0) THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='05';
+		END IF;
+		IF ((deductibleAdjustAmt = 0.0 AND 
+				totalOOPAdjustAmt <> 0.0 AND
+					shadowDeductibleAdjustAmt <> 0.0) OR 
+			(deductibleAdjustAmt <> 0.0 AND 
+				totalOOPAdjustAmt = 0.0 AND
+					shadowDeductibleAdjustAmt <> 0.0)) THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='24';
+		END IF;
+		IF ((deductibleAdjustAmt <> 0.0 AND 
+				totalOOPAdjustAmt = 0.0 AND
+					shadowDeductibleAdjustAmt = 0.0 AND
+						shadowTotalOOPAdjustAmt <> 0.0)OR
+			(deductibleAdjustAmt = 0.0 AND 
+				totalOOPAdjustAmt <> 0.0 AND
+					shadowDeductibleAdjustAmt = 0.0 AND
+						shadowTotalOOPAdjustAmt <> 0.0) OR 
+			(deductibleAdjustAmt = 0.0 AND 
+					totalOOPAdjustAmt = 0.0 AND
+						shadowDeductibleAdjustAmt <> 0.0 AND
+							shadowTotalOOPAdjustAmt <> 0.0))THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='25';	
+		END IF;
+		--------------SOS Account3-----------------
+		CREATE NEXTSIBLING OF refAccount AS refAccount REPEAT;
+		MOVE refAccount NEXTSIBLING REPEAT TYPE NAME;
+		SET refAccount.TYPE_OF_ACCOUNT ='SOS Account3';-- DO NOT INCLUDE IN ORIGINAL
+		-- TYPE_OF_BENEFIT_ACCOUNT
+		SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';
+		IF (deductibleAdjustAmt <> 0.0 AND 
+				totalOOPAdjustAmt <> 0.0 AND
+					shadowDeductibleAdjustAmt <> 0.0) THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='24';
+		END IF;
+		IF ((deductibleAdjustAmt <> 0.0 AND 
+				totalOOPAdjustAmt = 0.0 AND
+					shadowDeductibleAdjustAmt <> 0.0 AND
+						shadowTotalOOPAdjustAmt <> 0.0) OR
+			(deductibleAdjustAmt = 0.0 AND 
+				totalOOPAdjustAmt <> 0.0 AND
+					shadowDeductibleAdjustAmt <> 0.0 AND
+						shadowTotalOOPAdjustAmt <> 0.0) OR 
+			(deductibleAdjustAmt <> 0.0 AND 
+				totalOOPAdjustAmt <> 0.0 AND
+					shadowDeductibleAdjustAmt = 0.0 AND
+						shadowTotalOOPAdjustAmt <> 0.0))THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='25';	
+		END IF;
+		--------------SOS Account4-----------------
+		CREATE NEXTSIBLING OF refAccount AS refAccount REPEAT;
+		MOVE refAccount NEXTSIBLING REPEAT TYPE NAME;
+		SET refAccount.TYPE_OF_ACCOUNT ='SOS Account4';-- DO NOT INCLUDE IN ORIGINAL
+		-- TYPE_OF_BENEFIT_ACCOUNT
+		SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';
+		IF (deductibleAdjustAmt <> 0.0 AND 
+				totalOOPAdjustAmt <> 0.0 AND
+					shadowDeductibleAdjustAmt <> 0.0 AND
+						shadowTotalOOPAdjustAmt <> 0.0)THEN
+			SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='25';	
+		END IF;
+		--------------SOS Account5-----------------
+		CREATE NEXTSIBLING OF refAccount AS refAccount REPEAT;
+		MOVE refAccount NEXTSIBLING REPEAT TYPE NAME;
+		SET refAccount.TYPE_OF_ACCOUNT ='SOS Account5';-- DO NOT INCLUDE IN ORIGINAL
+		SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';		
+		SET refAccount.PARTICIPATION_TYPE='';
+		SET refAccount.CURRENT_AMOUNT='';
+		SET refAccount.CR_DB_INDICATOR='';
+		SET refAccount.ACCUMULATED_AMOUNT='';
+		SET refAccount.REMAINING_AMOUNT='';
+		--------------SOS Account6-----------------
+		CREATE NEXTSIBLING OF refAccount AS refAccount REPEAT;
+		MOVE refAccount NEXTSIBLING REPEAT TYPE NAME;
+		SET refAccount.TYPE_OF_ACCOUNT ='SOS Account6'; -- DO NOT INCLUDE IN ORIGINAL
+		SET refAccount.TYPE_OF_BENEFIT_ACCOUNT ='';		
+		SET refAccount.PARTICIPATION_TYPE='';
+		SET refAccount.CURRENT_AMOUNT='';
+		SET refAccount.CR_DB_INDICATOR='';
+		SET refAccount.ACCUMULATED_AMOUNT='';
+		SET refAccount.REMAINING_AMOUNT='';
 		-- CALL CopyMessageHeaders();
 		-- CALL CopyEntireMessage();
 		RETURN TRUE;
