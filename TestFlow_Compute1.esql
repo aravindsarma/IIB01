@@ -1,0 +1,101 @@
+
+
+CREATE COMPUTE MODULE TestFlow_Compute1
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE refTran REFERENCE TO InputRoot.XMLNSC.refEnvBen.*:transactions.*:transaction;
+		CREATE FIELD OutputRoot.XMLNSC.DETAIL;
+		DECLARE refDetail REFERENCE TO OutputRoot.XMLNSC.DETAIL;
+		---------------------------------------------------------------------------------------------------------------------------------
+		-- Temp variables used by all SOS Accounts
+		---------------------------------------------------------------------------------------------------------------------------------
+		DECLARE deductibleAdjustAmt DECIMAL 0.0;
+		DECLARE totalOOPAdjustAmt DECIMAL 0.0;
+		DECLARE shadowDeductibleAdjustAmt DECIMAL 0.0;
+		DECLARE shadowTotalOOPAdjustAmt DECIMAL 0.0;
+		SET deductibleAdjustAmt = CAST(refTran.*:deductibleAdjustAmt AS DECIMAL DEFAULT 0.0);
+		SET totalOOPAdjustAmt = CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0);
+		SET shadowDeductibleAdjustAmt = CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0);
+		SET shadowTotalOOPAdjustAmt = CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0);
+		---------------------------------------------------------------------------------------------------------------------------------
+		-- Temp variables used by all SOS Accounts
+		---------------------------------------------------------------------------------------------------------------------------------
+		DECLARE deductibleAdjustAmt100 DECIMAL 0.0;
+		DECLARE totalOOPAdjustAmt100 DECIMAL 0.0;
+		DECLARE shadowDeductibleAdjustAmt100 DECIMAL 0.0;
+		DECLARE shadowTotalOOPAdjustAmt100 DECIMAL 0.0;
+		SET deductibleAdjustAmt100 = deductibleAdjustAmt * 100;
+		SET totalOOPAdjustAmt100 = totalOOPAdjustAmt * 100;
+		SET shadowDeductibleAdjustAmt100 = shadowDeductibleAdjustAmt * 100;
+		SET shadowTotalOOPAdjustAmt100 = shadowTotalOOPAdjustAmt * 100;
+		---------------------------------------------------------------------------------------------------------------------------------
+		-- SOS_NUMBER_OF_ITEMS
+		SET refDetail.SOS_NUMBER_OF_ITEMS='';
+		---------------------------------------------------------------------------------------------------------------------------------
+		SET refDetail.SOS_PRODUCT_ID ='';
+		SET refDetail.FILLER_14='';
+		DECLARE I INTEGER 1;
+		SBB: WHILE I < 7 DO
+				SET refDetail.SOS_SIGN_BIT_BALANCE[I]='';
+				SET I = I + 1;
+		END WHILE SBB;
+		
+		SET I = 1;
+		DECLARE amtRef REFERENCE TO refTran.*:deductibleAdjustAmt;
+		SOS: WHILE LASTMOVE (amtRef) DO
+				DECLARE amtName CHARACTER FIELDNAME(amtRef); 
+				IF amtName IN ('deductibleAdjustAmt','totalOOPAdjustAmt','shadowDeductibleAdjustAmt','shadowTotalOOPAdjustAmt') THEN
+					IF amtRef <> 0.0 THEN
+						SET refDetail.SOS_ACCOUNT[I].TYPE_OF_ACCOUNT = I;-- DO NOT INCLUDE IN ORIGINAL
+						SET refDetail.SOS_SIGN_BIT_BALANCE[I]='+';
+						-- TYPE_OF_BENEFIT_ACCOUNT
+						SET refDetail.SOS_ACCOUNT[I].TYPE_OF_BENEFIT_ACCOUNT ='';
+						IF amtName = 'deductibleAdjustAmt' THEN
+							SET refDetail.SOS_ACCOUNT[I].TYPE_OF_BENEFIT_ACCOUNT ='04';
+						ELSEIF amtName = 'totalOOPAdjustAmt' THEN
+							SET refDetail.SOS_ACCOUNT[I].TYPE_OF_BENEFIT_ACCOUNT ='05';
+						ELSEIF amtName = 'shadowDeductibleAdjustAmt' THEN
+							SET refDetail.SOS_ACCOUNT[I].TYPE_OF_BENEFIT_ACCOUNT ='24';
+						ELSEIF amtName = 'shadowTotalOOPAdjustAmt' THEN
+							SET refDetail.SOS_ACCOUNT[I].TYPE_OF_BENEFIT_ACCOUNT ='25';
+						END IF;
+						SET I = I + 1;
+						--PARTICIPATION_TYPE
+						--CURRENT_AMOUNT
+						--CR_DB_INDICATOR
+						--ACCUMULATED_AMOUNT
+						--REMAINING_AMOUNT
+					END IF;
+				END IF;
+				MOVE amtRef NEXTSIBLING REPEAT TYPE;
+		END WHILE SOS;
+		SET refDetail.SOS_NUMBER_OF_ITEMS = '0'||CAST((I-1) AS CHARACTER);
+		SOSrem: WHILE I < 7 DO
+					SET refDetail.SOS_ACCOUNT[I].TYPE_OF_ACCOUNT = I;-- DO NOT INCLUDE IN ORIGINAL
+					SET refDetail.SOS_ACCOUNT[I].TYPE_OF_BENEFIT_ACCOUNT ='';		
+					SET refDetail.SOS_ACCOUNT[I].PARTICIPATION_TYPE='';
+					SET refDetail.SOS_ACCOUNT[I].CURRENT_AMOUNT='';
+					SET refDetail.SOS_ACCOUNT[I].CR_DB_INDICATOR='';
+					SET refDetail.SOS_ACCOUNT[I].ACCUMULATED_AMOUNT='';
+					SET refDetail.SOS_ACCOUNT[I].REMAINING_AMOUNT='';
+					SET I = I + 1;
+		END WHILE SOSrem; 
+		-- CALL CopyMessageHeaders();
+		-- CALL CopyEntireMessage();
+		RETURN TRUE;
+	END;
+
+	CREATE PROCEDURE CopyMessageHeaders() BEGIN
+		DECLARE I INTEGER 1;
+		DECLARE J INTEGER;
+		SET J = CARDINALITY(InputRoot.*[]);
+		WHILE I < J DO
+			SET OutputRoot.*[I] = InputRoot.*[I];
+			SET I = I + 1;
+		END WHILE;
+	END;
+
+	CREATE PROCEDURE CopyEntireMessage() BEGIN
+		SET OutputRoot = InputRoot;
+	END;
+END MODULE;

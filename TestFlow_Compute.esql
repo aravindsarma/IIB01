@@ -31,6 +31,69 @@ CREATE COMPUTE MODULE TestFlow_Compute
 		SET totalOOPAdjustAmt = CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0);
 		SET shadowDeductibleAdjustAmt = CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0);
 		SET shadowTotalOOPAdjustAmt = CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0);
+		-- Alternate way
+		IF deductibleAdjustAmt <> 0.0 THEN
+			IF totalOOPAdjustAmt <> 0.0 THEN
+				IF shadowDeductibleAdjustAmt <> 0.0 THEN
+					IF shadowTotalOOPAdjustAmt <> 0.0 THEN
+						SET refDetail.SOS_NUMBER_OF_ITEMS='04';
+					ELSE
+						SET refDetail.SOS_NUMBER_OF_ITEMS='03';
+					END IF;
+				ELSE
+					IF shadowTotalOOPAdjustAmt <> 0.0 THEN
+						SET refDetail.SOS_NUMBER_OF_ITEMS='03';
+					ELSE
+						SET refDetail.SOS_NUMBER_OF_ITEMS='02';
+					END IF;
+				END IF;
+			ELSE
+				IF shadowDeductibleAdjustAmt <> 0.0 THEN
+					IF shadowTotalOOPAdjustAmt <> 0.0 THEN
+						SET refDetail.SOS_NUMBER_OF_ITEMS='03';
+					ELSE
+						SET refDetail.SOS_NUMBER_OF_ITEMS='02';
+					END IF;
+				ELSE
+					IF shadowTotalOOPAdjustAmt <> 0.0 THEN
+						SET refDetail.SOS_NUMBER_OF_ITEMS='02';
+					ELSE
+						SET refDetail.SOS_NUMBER_OF_ITEMS='01';
+					END IF;
+				END IF;
+			END IF;
+		ELSE
+			IF totalOOPAdjustAmt <> 0.0 THEN
+				IF shadowDeductibleAdjustAmt <> 0.0 THEN
+					IF shadowTotalOOPAdjustAmt <> 0.0 THEN
+						SET refDetail.SOS_NUMBER_OF_ITEMS='03';
+					ELSE
+						SET refDetail.SOS_NUMBER_OF_ITEMS='02';
+					END IF;
+				ELSE
+					IF shadowTotalOOPAdjustAmt <> 0.0 THEN
+						SET refDetail.SOS_NUMBER_OF_ITEMS='02';
+					ELSE
+						SET refDetail.SOS_NUMBER_OF_ITEMS='01';
+					END IF;
+				END IF;
+			ELSE
+				IF shadowDeductibleAdjustAmt <> 0.0 THEN
+					IF shadowTotalOOPAdjustAmt <> 0.0 THEN
+						SET refDetail.SOS_NUMBER_OF_ITEMS='02';
+					ELSE
+						SET refDetail.SOS_NUMBER_OF_ITEMS='01';
+					END IF;
+				ELSE
+					IF shadowTotalOOPAdjustAmt <> 0.0 THEN
+						SET refDetail.SOS_NUMBER_OF_ITEMS='01';
+					ELSE
+						SET refDetail.SOS_NUMBER_OF_ITEMS='';
+					END IF;
+				END IF;
+			END IF;
+		END IF;
+		-- end alteranate way
 		---------------------------------------------------------------------------------------------------------------------------------
 		-- Normal claim	01	
 		IF (deductibleAdjustAmt = 0.0 OR 
