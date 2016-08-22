@@ -17,9 +17,7 @@ CREATE COMPUTE MODULE TestFlow_Compute1
 		SET totalOOPAdjustAmt = CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL DEFAULT 0.0);
 		SET shadowDeductibleAdjustAmt = CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0);
 		SET shadowTotalOOPAdjustAmt = CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0);
-		---------------------------------------------------------------------------------------------------------------------------------
-		-- Temp variables used by all SOS Accounts
-		---------------------------------------------------------------------------------------------------------------------------------
+		
 		DECLARE deductibleAdjustAmt100 DECIMAL 0.0;
 		DECLARE totalOOPAdjustAmt100 DECIMAL 0.0;
 		DECLARE shadowDeductibleAdjustAmt100 DECIMAL 0.0;
@@ -35,7 +33,7 @@ CREATE COMPUTE MODULE TestFlow_Compute1
 		SET refDetail.SOS_PRODUCT_ID ='';
 		SET refDetail.FILLER_14='';
 		DECLARE I INTEGER 1;
-		SBB: WHILE I < 7 DO
+		SBB: WHILE I <= 6 DO
 				SET refDetail.SOS_SIGN_BIT_BALANCE[I]='';
 				SET I = I + 1;
 		END WHILE SBB;
@@ -48,8 +46,8 @@ CREATE COMPUTE MODULE TestFlow_Compute1
 					IF amtRef <> 0.0 THEN
 						SET refDetail.SOS_ACCOUNT[I].TYPE_OF_ACCOUNT = I;-- DO NOT INCLUDE IN ORIGINAL
 						SET refDetail.SOS_SIGN_BIT_BALANCE[I]='+';
+						
 						-- TYPE_OF_BENEFIT_ACCOUNT
-						SET refDetail.SOS_ACCOUNT[I].TYPE_OF_BENEFIT_ACCOUNT ='';
 						IF amtName = 'deductibleAdjustAmt' THEN
 							SET refDetail.SOS_ACCOUNT[I].TYPE_OF_BENEFIT_ACCOUNT ='04';
 						ELSEIF amtName = 'totalOOPAdjustAmt' THEN
@@ -59,18 +57,77 @@ CREATE COMPUTE MODULE TestFlow_Compute1
 						ELSEIF amtName = 'shadowTotalOOPAdjustAmt' THEN
 							SET refDetail.SOS_ACCOUNT[I].TYPE_OF_BENEFIT_ACCOUNT ='25';
 						END IF;
-						SET I = I + 1;
+						
 						--PARTICIPATION_TYPE
-						--CURRENT_AMOUNT
-						--CR_DB_INDICATOR
-						--ACCUMULATED_AMOUNT
-						--REMAINING_AMOUNT
+						IF refTran.*:additionalData.*:DeductibleAccount IN ('001','000','0') AND refTran.*:additionalData.*:accumulatorValue IN ('33','34','36','37')  THEN
+							SET refDetail.SOS_ACCOUNT[I].PARTICIPATION_TYPE= '1';
+						ELSEIF refTran.*:additionalData.*:DeductibleAccount IN ('008') AND refTran.*:additionalData.*:accumulatorValue IN ('33','34','36','37')  THEN
+							SET refDetail.SOS_ACCOUNT[I].PARTICIPATION_TYPE= '2';
+						ELSEIF refTran.*:networkInd IN ('INN','INP') THEN
+							SET refDetail.SOS_ACCOUNT[I].PARTICIPATION_TYPE= '1';
+						ELSEIF refTran.*:networkInd='OON' AND refTran.*:additionalData.*:accumulatorValue='28'  THEN
+							SET refDetail.SOS_ACCOUNT[I].PARTICIPATION_TYPE='2';
+						ELSEIF refTran.*:networkInd='OON' AND refTran.*:additionalData.*:accumulatorValue<>'28' THEN
+							SET refDetail.SOS_ACCOUNT[I].PARTICIPATION_TYPE='1';
+						ELSE
+							SET refDetail.SOS_ACCOUNT[I].PARTICIPATION_TYPE='0';
+						END IF;
+						
+						--CURRENT_AMOUNT --CR_DB_INDICATOR
+						IF amtName = 'deductibleAdjustAmt' AND deductibleAdjustAmt100 <> 0.0 THEN
+							IF deductibleAdjustAmt100 < 0.0 THEN
+								SET refDetail.SOS_ACCOUNT[I].CURRENT_AMOUNT = deductibleAdjustAmt100 * -1.0;
+								SET refDetail.SOS_ACCOUNT[I].CR_DB_INDICATOR='-';
+							ELSEIF deductibleAdjustAmt100 > 0.0 THEN
+								SET refDetail.SOS_ACCOUNT[I].CURRENT_AMOUNT = deductibleAdjustAmt100;
+								SET refDetail.SOS_ACCOUNT[I].CR_DB_INDICATOR='+';
+							END IF;			
+						ELSEIF amtName = 'totalOOPAdjustAmt' AND totalOOPAdjustAmt100 <> 0.0 THEN
+							IF totalOOPAdjustAmt100 < 0.0 THEN
+								SET refDetail.SOS_ACCOUNT[I].CURRENT_AMOUNT = totalOOPAdjustAmt100 * -1.0;
+								SET refDetail.SOS_ACCOUNT[I].CR_DB_INDICATOR='-';
+							ELSEIF totalOOPAdjustAmt100 > 0.0 THEN
+								SET refDetail.SOS_ACCOUNT[I].CURRENT_AMOUNT = totalOOPAdjustAmt100;
+								SET refDetail.SOS_ACCOUNT[I].CR_DB_INDICATOR='+';
+							END IF;
+						ELSEIF amtName = 'shadowDeductibleAdjustAmt' AND shadowDeductibleAdjustAmt100 <> 0.0 THEN
+							IF shadowDeductibleAdjustAmt100 < 0.0 THEN
+								SET refDetail.SOS_ACCOUNT[I].CURRENT_AMOUNT = shadowDeductibleAdjustAmt100 * -1.0;
+								SET refDetail.SOS_ACCOUNT[I].CR_DB_INDICATOR='-';
+							ELSEIF shadowDeductibleAdjustAmt100 > 0.0 THEN
+								SET refDetail.SOS_ACCOUNT[I].CURRENT_AMOUNT = shadowDeductibleAdjustAmt100;
+								SET refDetail.SOS_ACCOUNT[I].CR_DB_INDICATOR='+';
+							END IF;
+						ELSEIF amtName = 'shadowTotalOOPAdjustAmt' AND shadowTotalOOPAdjustAmt100 <> 0.0 THEN
+							IF shadowTotalOOPAdjustAmt100 < 0.0 THEN
+								SET refDetail.SOS_ACCOUNT[I].CURRENT_AMOUNT = shadowTotalOOPAdjustAmt100 * -1.0;
+								SET refDetail.SOS_ACCOUNT[I].CR_DB_INDICATOR='-';
+							ELSEIF shadowTotalOOPAdjustAmt100 > 0.0 THEN
+								SET refDetail.SOS_ACCOUNT[I].CURRENT_AMOUNT = shadowTotalOOPAdjustAmt100;
+								SET refDetail.SOS_ACCOUNT[I].CR_DB_INDICATOR='+';
+							END IF;
+						ELSE
+							SET refDetail.SOS_ACCOUNT[I].CURRENT_AMOUNT = 0;
+							SET refDetail.SOS_ACCOUNT[I].CR_DB_INDICATOR='';	
+						END IF;						
+						
+						--ACCUMULATED_AMOUNT --REMAINING_AMOUNT
+						IF refDetail.SOS_ACCOUNT[I].CURRENT_AMOUNT <> 0 THEN
+							SET refDetail.SOS_ACCOUNT[I].ACCUMULATED_AMOUNT= '0000000000';
+							SET refDetail.SOS_ACCOUNT[I].REMAINING_AMOUNT  = '0000000000';
+						ELSE
+							SET refDetail.SOS_ACCOUNT[I].ACCUMULATED_AMOUNT='';
+							SET refDetail.SOS_ACCOUNT[I].REMAINING_AMOUNT  ='';
+						END IF;
+						
+						-- Index Increment
+						SET I = I + 1;
 					END IF;
 				END IF;
 				MOVE amtRef NEXTSIBLING REPEAT TYPE;
 		END WHILE SOS;
 		SET refDetail.SOS_NUMBER_OF_ITEMS = '0'||CAST((I-1) AS CHARACTER);
-		SOSrem: WHILE I < 7 DO
+		SOSrem: WHILE I <= 6 DO
 					SET refDetail.SOS_ACCOUNT[I].TYPE_OF_ACCOUNT = I;-- DO NOT INCLUDE IN ORIGINAL
 					SET refDetail.SOS_ACCOUNT[I].TYPE_OF_BENEFIT_ACCOUNT ='';		
 					SET refDetail.SOS_ACCOUNT[I].PARTICIPATION_TYPE='';

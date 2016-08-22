@@ -1,0 +1,78 @@
+DECLARE NS1 NAMESPACE 'http://www.healthnow.org/types/data/AccumulatorTransaction';
+DECLARE soapenv NAMESPACE 'http://schemas.xmlsoap.org/soap/envelope/';
+DECLARE v2 NAMESPACE 'http://www.healthnow.org/services/data/AccumulatorBenefitsCalculator/V2';
+
+CREATE COMPUTE MODULE BuildAccumulatorBalance_BuildILogRequest
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE MODULE_NAME CHARACTER MessageFlowLabel || '.' || NodeLabel;
+		--CALL CopyEntireMessage();
+		SET Environment.Service.currentService = '?';--'WSP_AccumulatorBenefitsCalculator';
+		SET Environment.Service.currentOperation = '?';--'getAccumulatorAccountsRequest';
+		DECLARE refTran REFERENCE TO InputRoot.XMLNSC.refEnvBen.*:transactions.*:transaction;
+		
+		CREATE FIELD OutputRoot.XMLNSC.soapenv:Envelope.soapenv:Body.v2:getAccumulatorAccountsRequest;
+		DECLARE refOut REFERENCE TO OutputRoot.XMLNSC.soapenv:Envelope.soapenv:Body.v2:getAccumulatorAccountsRequest;
+		
+		CREATE LASTCHILD OF refOut NAMESPACE v2 NAME 'accumulator';
+		DECLARE refAcc REFERENCE TO refOut.v2:accumulator;
+		SET refAcc.v2:benefitKey = '?';--Environment.SQL.Results.BEN_KEY;
+		SET refAcc.v2:benefitValue = '?';--TRIM(Environment.SQL.Results.BEN_VAL_CD);
+		SET refAcc.v2:categoryCode = 'M';--TRIM(Environment.SQL.Results.BEN_VAL_CD);
+		SET refAcc.v2:networkIndicator = '?';--refTran.*:networkInd;
+		SET refAcc.v2:deductible = CAST(refTran.*:deductibleAdjustAmt AS DECIMAL);
+		SET refAcc.v2:outOfPocketMaximum = CAST(refTran.*:totalOOPAdjustAmt AS DECIMAL);
+		SET refAcc.v2:copay = '?';--CAST(refTran.NS1:copaymentAdjustAmt AS DECIMAL);
+		SET refAcc.v2:coinsurance = '?';--CAST(refTran.NS1:coinsuranceAdjustAmt AS DECIMAL);
+
+        CREATE LASTCHILD OF refAcc NAMESPACE v2 NAME 'additionalData';
+		DECLARE refAddM REFERENCE TO refAcc.v2:additionalData;
+		SET refAddM.v2:inboundAccountNumber = '?';--COALESCE(refTran.NS1:additionalData.*:DeductibleAccount,0);
+		SET refAddM.v2:submitterID='?';--Environment.submitterId;
+		
+		DECLARE shadowDeductibleAdjustAmt DECIMAL 0.0;
+		DECLARE shadowTotalOOPAdjustAmt DECIMAL 0.0;
+		DECLARE shadowCopaymentAdjustAmt DECIMAL 0.0;
+		DECLARE shadowCoinsuranceAdjustAmt DECIMAL 0.0;
+		SET shadowDeductibleAdjustAmt = CAST(refTran.*:shadowDeductibleAdjustAmt AS DECIMAL DEFAULT 0.0);
+		SET shadowTotalOOPAdjustAmt = CAST(refTran.*:shadowTotalOOPAdjustAmt AS DECIMAL DEFAULT 0.0);
+		SET shadowCopaymentAdjustAmt = CAST(refTran.*:shadowCopaymentAdjustAmt AS DECIMAL DEFAULT 0.0);
+		SET shadowCoinsuranceAdjustAmt = CAST(refTran.*:shadowCoinsuranceAdjustAmt AS DECIMAL DEFAULT 0.0);
+		
+		IF shadowDeductibleAdjustAmt<>0 OR shadowTotalOOPAdjustAmt<>0 OR shadowCopaymentAdjustAmt<>0 OR shadowCoinsuranceAdjustAmt<>0 THEN
+			CREATE LASTCHILD OF refOut NAMESPACE v2 NAME 'accumulator';
+			MOVE refAcc NEXTSIBLING REPEAT TYPE NAME;
+			SET refAcc.v2:benefitKey = '?';--Environment.SQL.Results.BEN_KEY;
+			SET refAcc.v2:benefitValue = '?';--TRIM(Environment.SQL.Results.BEN_VAL_CD);
+			SET refAcc.v2:categoryCode = 'SHD';
+			SET refAcc.v2:networkIndicator = '?';--refTran.*:networkInd;
+			SET refAcc.v2:deductible = shadowDeductibleAdjustAmt;
+			SET refAcc.v2:outOfPocketMaximum = shadowTotalOOPAdjustAmt;
+			SET refAcc.v2:copay = '?';--CAST(refTran.NS1:shadowCopaymentAdjustAmt AS DECIMAL);
+			SET refAcc.v2:coinsurance = '?';--CAST(refTran.NS1:shadowCoinsuranceAdjustAmt AS DECIMAL);
+	
+	        CREATE LASTCHILD OF refAcc NAMESPACE v2 NAME 'additionalData';
+	        DECLARE refAddS REFERENCE TO refAcc.v2:additionalData;
+			SET refAddS.v2:inboundAccountNumber = '?';--COALESCE(refTran.NS1:additionalData.*:DeductibleAccount,0);
+			SET refAddS.v2:submitterID='?';--Environment.submitterId;
+		END IF;
+		
+		-- CALL CopyMessageHeaders();
+		-- CALL CopyEntireMessage();
+		RETURN TRUE;
+	END;
+
+	CREATE PROCEDURE CopyMessageHeaders() BEGIN
+		DECLARE I INTEGER 1;
+		DECLARE J INTEGER;
+		SET J = CARDINALITY(InputRoot.*[]);
+		WHILE I < J DO
+			SET OutputRoot.*[I] = InputRoot.*[I];
+			SET I = I + 1;
+		END WHILE;
+	END;
+
+	CREATE PROCEDURE CopyEntireMessage() BEGIN
+		SET OutputRoot = InputRoot;
+	END;
+END MODULE;
